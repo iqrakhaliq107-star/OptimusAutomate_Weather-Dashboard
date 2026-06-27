@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nimbus – Premium Weather</title>
+
+  <!-- External CSS & libraries -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <a class="skip-link" href="#weatherMain">Skip to main content</a>
+
+  <!-- Offline Banner -->
+  <div class="offline-banner" id="offlineBanner" role="alert">
+    <i class="fas fa-wifi" aria-hidden="true"></i> You are offline. Showing cached data.
+  </div>
+
+  <!-- Loader -->
+  <div class="loader-overlay" id="loader" role="status" aria-label="Loading">
+    <div class="loader-spinner"><span class="sr-only">Loading weather data...</span></div>
+  </div>
+
+  <!-- Dynamic Gradient Overlay -->
+  <div class="gradient-overlay dynamic" id="gradientOverlay"></div>
+
+  <!-- Floating Clouds -->
+  <div class="cloud-layer" aria-hidden="true">
+    <div class="cloud">☁️</div>
+    <div class="cloud">☁️</div>
+    <div class="cloud">☁️</div>
+    <div class="cloud">☁️</div>
+    <div class="cloud">☁️</div>
+    <div class="cloud">☁️</div>
+  </div>
+
+  <!-- Particle Canvas -->
+  <canvas id="particleCanvas"></canvas>
+
+  <!-- ========== MAIN APP ========== -->
+  <div class="container" id="app">
+
+    <!-- Header -->
+    <header class="header flex-between" role="banner">
+      <div class="logo" aria-label="Nimbus Weather">
+        <i class="fas fa-cloud-sun" aria-hidden="true"></i> Nimbus
+      </div>
+      <div class="search-wrapper" role="search">
+        <label for="searchInput" class="sr-only">Search for a city</label>
+        <input type="text" id="searchInput" placeholder="Search city…" aria-label="Search for a city" />
+        <button id="searchBtn" aria-label="Search"><i class="fas fa-search" aria-hidden="true"></i> Search</button>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" id="locateBtn" aria-label="Use my current location" title="My Location">
+          <i class="fas fa-location-dot" aria-hidden="true"></i>
+        </button>
+        <button class="btn-icon" id="unitToggle" aria-label="Toggle temperature unit" title="Toggle °C/°F">
+          <span id="unitLabel" aria-hidden="true">°C</span>
+        </button>
+        <button class="btn-icon" id="refreshBtn" aria-label="Refresh weather" title="Refresh">
+          <i class="fas fa-rotate" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Messages -->
+    <div id="messageContainer" role="alert" aria-live="polite"></div>
+
+    <!-- Weather Hero -->
+    <section class="weather-hero" id="weatherMain" role="main" aria-label="Weather information">
+      <!-- Current Weather -->
+      <div class="current-weather glass glow" id="currentWeather">
+        <div class="glow-ring" id="glowRing"></div>
+        <div class="flex-between">
+          <div>
+            <div class="city" id="cityName">--</div>
+            <div class="country" id="countryName">--</div>
+          </div>
+          <span class="icon-wrap" id="weatherIcon" aria-hidden="true">☀️</span>
+        </div>
+        <div class="temp-wrap">
+          <span class="temp" id="tempDisplay">--</span>
+          <span class="temp-unit" id="tempUnit">°C</span>
+        </div>
+        <div class="condition" id="conditionText">Loading…</div>
+        <div class="details-grid" role="list">
+          <div class="item" role="listitem"><div class="label">Humidity</div><div class="value" id="humidity">--%</div></div>
+          <div class="item" role="listitem"><div class="label">Wind</div><div class="value" id="wind">-- km/h</div></div>
+          <div class="item" role="listitem"><div class="label">Pressure</div><div class="value" id="pressure">-- hPa</div></div>
+          <div class="item" role="listitem"><div class="label">Visibility</div><div class="value" id="visibility">-- km</div></div>
+          <div class="item" role="listitem"><div class="label">Feels Like</div><div class="value" id="feelslike">--°C</div></div>
+          <div class="item" role="listitem"><div class="label">UV Index</div><div class="value" id="uvIndex">--</div></div>
+        </div>
+      </div>
+
+      <!-- Stats Side -->
+      <div class="stats-side">
+        <div class="stat-row">
+          <div class="stat-card"><div class="icon" aria-hidden="true"><i class="fas fa-arrow-up"></i></div><div class="number" id="highTemp">--</div><div class="label">High</div></div>
+          <div class="stat-card"><div class="icon" aria-hidden="true"><i class="fas fa-arrow-down"></i></div><div class="number" id="lowTemp">--</div><div class="label">Low</div></div>
+          <div class="stat-card"><div class="icon" aria-hidden="true"><i class="fas fa-chart-line"></i></div><div class="number" id="avgTemp">--</div><div class="label">Average</div></div>
+          <div class="stat-card"><div class="icon" aria-hidden="true"><i class="fas fa-droplet"></i></div><div class="number" id="humidityAvg">--%</div><div class="label">Avg Humidity</div></div>
+        </div>
+
+        <!-- AQI + Compass -->
+        <div class="aqi-compass">
+          <div class="aqi-card">
+            <div class="flex-between">
+              <span class="aqi-label"><i class="fas fa-wind" aria-hidden="true"></i> Air Quality</span>
+              <span class="aqi-value" id="aqiValue">--</span>
+            </div>
+            <div class="flex-between mt-8">
+              <span class="aqi-status" id="aqiStatus">--</span>
+              <span class="text-muted" id="aqiDetail" style="font-size:0.7rem;">--</span>
+            </div>
+          </div>
+          <div class="compass-card">
+            <span class="compass-label"><i class="fas fa-location-arrow" aria-hidden="true"></i> Wind</span>
+            <div class="compass-wrap">
+              <svg viewBox="0 0 100 100" id="compassSvg">
+                <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+                <circle cx="50" cy="50" r="36" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+                <text x="50" y="12" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.25)" font-weight="700">N</text>
+                <text x="88" y="54" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.25)" font-weight="700">E</text>
+                <text x="50" y="96" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.25)" font-weight="700">S</text>
+                <text x="12" y="54" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.25)" font-weight="700">W</text>
+                <g id="compassArrow" transform="rotate(0, 50, 50)">
+                  <polygon points="50,12 44,50 50,42 56,50" fill="var(--color-accent)" />
+                  <polygon points="50,88 46,56 50,62 54,56" fill="rgba(255,255,255,0.15)" />
+                  <circle cx="50" cy="50" r="6" fill="var(--bg-primary)" stroke="var(--color-accent)" stroke-width="2"/>
+                </g>
+              </svg>
+              <span class="wind-speed" id="windSpeedLabel">-- km/h</span>
+              <span class="wind-dir" id="windDirLabel">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sun / Moon -->
+        <div class="sun-moon-card" id="sunMoonCard">
+          <div class="sm-item">
+            <span class="sm-icon" id="sunIcon">🌅</span>
+            <div>
+              <div class="sm-label">Sunrise</div>
+              <div class="sm-time" id="sunriseTime">--:--</div>
+            </div>
+          </div>
+          <div class="sm-divider"></div>
+          <div class="sm-item">
+            <span class="sm-icon" id="moonIcon">🌇</span>
+            <div>
+              <div class="sm-label">Sunset</div>
+              <div class="sm-time" id="sunsetTime">--:--</div>
+            </div>
+          </div>
+          <div class="sm-divider"></div>
+          <div class="sm-item">
+            <span class="sm-icon" id="dayIcon">☀️</span>
+            <div>
+              <div class="sm-label">Day Length</div>
+              <div class="sm-time" id="dayLength">--h --m</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Hourly Forecast + Chart -->
+    <section class="forecast-section glass" id="hourlySection">
+      <div class="flex-between">
+        <div class="section-title"><i class="fas fa-clock" aria-hidden="true"></i> Hourly Forecast</div>
+        <span class="text-muted" style="font-size:0.7rem;font-weight:600;">Next 24 hours</span>
+      </div>
+      <div class="hourly-scroll" id="hourlyContainer" role="list"></div>
+      <div class="chart-container" id="hourlyChartContainer">
+        <canvas id="hourlyChart"></canvas>
+      </div>
+    </section>
+
+    <!-- 5-Day Forecast -->
+    <section class="forecast-section glass" id="dailySection" style="margin-bottom:24px;">
+      <div class="flex-between">
+        <div class="section-title"><i class="fas fa-calendar-day" aria-hidden="true"></i> 5-Day Forecast</div>
+        <span class="text-muted" style="font-size:0.7rem;font-weight:600;">Extended outlook</span>
+      </div>
+      <div class="daily-grid" id="dailyContainer" role="list"></div>
+      <div class="chart-container mt-16" id="dailyChartContainer">
+        <canvas id="dailyChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Favorites & Recent -->
+    <div class="grid-2">
+      <section class="glass favorites-section">
+        <div class="flex-between">
+          <div class="section-title"><i class="fas fa-star" aria-hidden="true"></i> Favorites</div>
+          <button class="btn-clear" id="clearFavoritesBtn" aria-label="Clear all favorites">Clear all</button>
+        </div>
+        <div class="chip-group" id="favoritesContainer" role="list">
+          <span class="text-muted" style="font-size:0.8rem;">Double‑click a city name to add</span>
+        </div>
+      </section>
+      <section class="glass recent-section">
+        <div class="flex-between">
+          <div class="section-title"><i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Recent</div>
+          <button class="btn-clear" id="clearRecentBtn" aria-label="Clear recent searches">Clear</button>
+        </div>
+        <div class="chip-group" id="recentContainer" role="list">
+          <span class="text-muted" style="font-size:0.8rem;">No recent searches</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>Data from <strong style="color:var(--text-secondary);">OpenWeatherMap</strong></span>
+      <span id="cacheStatus" aria-live="polite"></span>
+      <button class="btn-icon" id="shareBtn" aria-label="Share weather">
+        <i class="fas fa-share-alt" aria-hidden="true"></i> Share
+      </button>
+    </footer>
+  </div>
+
+  <!-- JavaScript -->
+  <script src="script.js"></script>
+</body>
+</html>
